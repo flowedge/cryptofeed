@@ -73,9 +73,9 @@ class OKCoin(Feed):
         {'table': 'spot/trade', 'data': [{'instrument_id': 'BTC-USD', 'price': '3977.44', 'side': 'buy', 'size': '0.0096', 'timestamp': '2019-03-22T22:45:44.578Z', 'trade_id': '486519521'}]}
         """
         if 'swap' in msg['table']:
-            callback_type = TRADES_SWAP
+            callback_type = TRADES
         elif 'futures' in msg['table']:
-            callback_type = TRADES_FUTURES
+            callback_type = TRADES
         else:
             callback_type = TRADES
 

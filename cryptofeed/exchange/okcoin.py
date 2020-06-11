@@ -1,3 +1,4 @@
+sa@collector1:/usr/local/lib/python3.7/dist-packages/cryptofeed/exchange$ cat /home/sa/.local/lib/python3.7/site-packages/cryptofeed/exchange/okcoin.py
 '''
 Copyright (C) 2017-2020  Bryant Moscon - bmoscon@gmail.com
 
@@ -51,17 +52,11 @@ class OKCoin(Feed):
         """
         {'table': 'spot/ticker', 'data': [{'instrument_id': 'BTC-USD', 'last': '3977.74', 'best_bid': '3977.08', 'best_ask': '3978.73', 'open_24h': '3978.21', 'high_24h': '3995.43', 'low_24h': '3961.02', 'base_volume_24h': '248.245', 'quote_volume_24h': '988112.225861', 'timestamp': '2019-03-22T22:26:34.019Z'}]}
         """
-        if 'swap' in msg['table']:
-            callback_type = TICKER_SWAP
-        elif 'futures' in msg['table']:
-            callback_type = TICKER_FUTURES
-        else:
-            callback_type = TICKER
 
         for update in msg['data']:
             pair = update['instrument_id']
             update_timestamp = timestamp_normalize(self.id, update['timestamp'])
-            await self.callback(callback_type, feed=self.id,
+            await self.callback(TICKER, feed=self.id,
                                 pair=pair,
                                 bid=Decimal(update['best_bid']),
                                 ask=Decimal(update['best_ask']),

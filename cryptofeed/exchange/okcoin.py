@@ -1,4 +1,3 @@
-sa@collector1:/usr/local/lib/python3.7/dist-packages/cryptofeed/exchange$ cat /home/sa/.local/lib/python3.7/site-packages/cryptofeed/exchange/okcoin.py
 '''
 Copyright (C) 2017-2020  Bryant Moscon - bmoscon@gmail.com
 

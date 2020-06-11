@@ -222,21 +222,17 @@ def huobi_dm_pairs():
 def okcoin_pairs():
     r = requests.get('https://www.okcoin.com/api/spot/v3/instruments').json()
     return {e['instrument_id']: e['instrument_id'] for e in r}
-
-
-def okex_pairs():
-    r = requests.get('https://www.okex.com/api/spot/v3/instruments').json()
-    data = {e['instrument_id']: e['instrument_id'] for e in r}
-    # swaps
+            
+            
+def okex_swap_pairs():
     r = requests.get('https://www.okex.com/api/swap/v3/instruments/ticker').json()
-    for update in r:
-        data[update['instrument_id']] = update['instrument_id']
-    # futures
+    return {e['instrument_id']: e['instrument_id'] for e in r}
+            
+            
+def okex_futures_pairs():
     r = requests.get('https://www.okex.com/api/futures/v3/instruments/ticker').json()
-    for update in r:
-        data[update['instrument_id']] = update['instrument_id']
-    return data
-
+    return {e['instrument_id']: e['instrument_id'] for e in r}
+            
 
 def coinbene_pairs():
     r = requests.get('http://api.coinbene.com/v1/market/symbol').json()
@@ -287,8 +283,8 @@ _exchange_function_map = {
     HUOBI_DM: huobi_dm_pairs,
     OKCOIN: okcoin_pairs,
     OKEX: okex_pairs,
-    OKEX_SWAP: okex_pairs,
-    OKEX_FUTURES: okex_pairs,
+    OKEX_SWAP: okex_swap_pairs,
+    OKEX_FUTURES: okex_futures_pairs,
     COINBENE: coinbene_pairs,
     BYBIT: bybit_pairs,
     FTX: ftx_pairs,

@@ -17,7 +17,7 @@ from websockets import ConnectionClosed
 from cryptofeed.defines import L2_BOOK, BLOCKCHAIN
 from cryptofeed.exchange.blockchain import Blockchain
 from cryptofeed.log import get_logger
-from cryptofeed.defines import DERIBIT, BINANCE, GEMINI, HITBTC, BITFINEX, BITMEX, BITSTAMP, POLONIEX, COINBASE, KRAKEN, KRAKEN_FUTURES, HUOBI, HUOBI_DM, OKCOIN, OKEX, COINBENE, BYBIT, BITTREX, BITCOINCOM, BINANCE_US, BITMAX, BINANCE_JERSEY, BINANCE_FUTURES, UPBIT, HUOBI_SWAP
+from cryptofeed.defines import DERIBIT, BINANCE, GEMINI, HITBTC, BITFINEX, BITMEX, BITSTAMP, POLONIEX, COINBASE, KRAKEN, KRAKEN_FUTURES, HUOBI, HUOBI_DM, OKCOIN, OKEX, OKEX_SWAP, OKEX_FUTURES, COINBENE, BYBIT, BITTREX, BITCOINCOM, BINANCE_US, BITMAX, BINANCE_JERSEY, BINANCE_FUTURES, UPBIT, HUOBI_SWAP
 from cryptofeed.defines import EXX as EXX_str
 from cryptofeed.defines import FTX as FTX_str
 from cryptofeed.defines import FTX_US as FTX_US_str
@@ -61,6 +61,8 @@ _EXCHANGES = {
     KRAKEN: Kraken,
     OKCOIN: OKCoin,
     OKEX: OKEx,
+    OKEX_SWAP: OKEx,
+    OKEX_FUTURES: OKEx,
     POLONIEX: Poloniex,
     UPBIT: Upbit
 }
@@ -245,7 +247,7 @@ class FeedHandler:
             if self.log_messages_on_error:
                 if feed_id in {HUOBI, HUOBI_DM}:
                     message = zlib.decompress(message, 16 + zlib.MAX_WBITS)
-                elif feed_id in {OKCOIN, OKEX}:
+                elif feed_id in {OKCOIN, OKEX, OKEX_FUTURES, OKEX_SWAP}:
                     message = zlib.decompress(message, -15)
                 LOG.error("%s: error handling message %s", feed_id, message)
             # exception will be logged with traceback when connection handler

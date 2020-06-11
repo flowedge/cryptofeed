@@ -23,6 +23,8 @@ from cryptofeed.exchange.huobi_dm import HuobiDM
 from cryptofeed.exchange.huobi_swap import HuobiSwap
 from cryptofeed.exchange.okcoin import OKCoin
 from cryptofeed.exchange.okex import OKEx
+from cryptofeed.exchange.okex import OKEx_swap
+from cryptofeed.exchange.okex import OKEx_futures
 from cryptofeed.exchange.coinbene import Coinbene
 from cryptofeed.exchange.deribit import Deribit
 from cryptofeed.exchange.bybit import Bybit

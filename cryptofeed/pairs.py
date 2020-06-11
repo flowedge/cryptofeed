@@ -9,7 +9,7 @@ Pair generation code for exchanges
 '''
 import requests
 
-from cryptofeed.defines import BITSTAMP, BITFINEX, COINBASE, GEMINI, HITBTC, POLONIEX, KRAKEN, BINANCE, BINANCE_US, BINANCE_JERSEY, BINANCE_FUTURES, EXX, HUOBI, HUOBI_DM, OKCOIN, OKEX, COINBENE, BYBIT, FTX, FTX_US, BITTREX, BITCOINCOM, BITMAX, UPBIT, DSX, BLOCKCHAIN
+from cryptofeed.defines import BITSTAMP, BITFINEX, COINBASE, GEMINI, HITBTC, POLONIEX, KRAKEN, BINANCE, BINANCE_US, BINANCE_JERSEY, BINANCE_FUTURES, EXX, HUOBI, HUOBI_DM, OKCOIN, OKEX, OKEX_SWAP, OKEX_FUTURES, COINBENE, BYBIT, FTX, FTX_US, BITTREX, BITCOINCOM, BITMAX, UPBIT, DSX, BLOCKCHAIN
 
 
 PAIR_SEP = '-'
@@ -287,6 +287,8 @@ _exchange_function_map = {
     HUOBI_DM: huobi_dm_pairs,
     OKCOIN: okcoin_pairs,
     OKEX: okex_pairs,
+    OKEX_SWAP: okex_pairs,
+    OKEX_FUTURES: okex_pairs,
     COINBENE: coinbene_pairs,
     BYBIT: bybit_pairs,
     FTX: ftx_pairs,

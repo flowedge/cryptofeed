@@ -61,8 +61,8 @@ _EXCHANGES = {
     KRAKEN: Kraken,
     OKCOIN: OKCoin,
     OKEX: OKEx,
-    OKEX_SWAP: OKEx,
-    OKEX_FUTURES: OKEx,
+    OKEX_SWAP: OKEx_swap,
+    OKEX_FUTURES: OKEx_futures,
     POLONIEX: Poloniex,
     UPBIT: Upbit
 }

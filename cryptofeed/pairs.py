@@ -223,6 +223,9 @@ def okcoin_pairs():
     r = requests.get('https://www.okcoin.com/api/spot/v3/instruments').json()
     return {e['instrument_id']: e['instrument_id'] for e in r}
             
+def okex_pairs():
+    r = requests.get('https://www.okex.com/api/spot/v3/instruments').json()
+    data = {e['instrument_id']: e['instrument_id'] for e in r}            
             
 def okex_swap_pairs():
     r = requests.get('https://www.okex.com/api/swap/v3/instruments/ticker').json()

@@ -69,7 +69,7 @@ class OKCoin(Feed):
                 self.open_interest[pair] = oi
                 await self.callback(OPEN_INTEREST, feed=self.id, 
                                     pair=(update['instrument_id']), 
-                                    open_interest=(update['open_interest']), 
+                                    open_interest=Decimal(update['open_interest']), 
                                     timestamp=update_timestamp, 
                                     receipt_timestamp=timestamp)
                 

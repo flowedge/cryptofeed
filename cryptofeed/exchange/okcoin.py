@@ -61,12 +61,17 @@ class OKCoin(Feed):
                                 ask=Decimal(update['best_ask']),
                                 timestamp=update_timestamp,
                                 receipt_timestamp=timestamp)
+            
             if 'open_interest' in update:
                 oi = update['open_interest']
                 if pair in self.open_interest and oi == self.open_interest[pair]:
                     continue
                 self.open_interest[pair] = oi
-                await self.callback(OPEN_INTEREST, feed=self.id, pair=pair, open_interest=oi, timestamp=update_timestamp, receipt_timestamp=timestamp)
+                await self.callback(OPEN_INTEREST, feed=self.id, 
+                                    pair=(update['instrument_id']), 
+                                    open_interest=(update['open_interest']), 
+                                    timestamp=update_timestamp, 
+                                    receipt_timestamp=timestamp)
                 
     async def _trade(self, msg: dict, timestamp: float):
         """

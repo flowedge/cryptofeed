@@ -67,7 +67,7 @@ class OKCoin(Feed):
                     continue
                 self.open_interest[pair] = oi
                 await self.callback(OPEN_INTEREST, feed=self.id, pair=pair, open_interest=oi, timestamp=update_timestamp, receipt_timestamp=timestamp)
-
+                print (f'update['open_interest']')
     async def _trade(self, msg: dict, timestamp: float):
         """
         {'table': 'spot/trade', 'data': [{'instrument_id': 'BTC-USD', 'price': '3977.44', 'side': 'buy', 'size': '0.0096', 'timestamp': '2019-03-22T22:45:44.578Z', 'trade_id': '486519521'}]}

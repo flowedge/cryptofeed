@@ -69,8 +69,8 @@ class OKCoin(Feed):
                     continue
                 self.open_interest[pair] = oi
                 await self.callback(OPEN_INTEREST, feed=self.id, 
-                                    pair=(update['instrument_id']), 
-                                    open_interest=100*(update['open_interest']), 
+                                    pair=pair, 
+                                    open_interest=oi, 
                                     timestamp=update_timestamp, 
                                     receipt_timestamp=timestamp)
                 

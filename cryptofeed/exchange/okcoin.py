@@ -63,8 +63,6 @@ class OKCoin(Feed):
                                 receipt_timestamp=timestamp)
             if 'open_interest' in update:
                 oi = update['open_interest']
-                print (oi)
-                print ('Hello, world!')
                 if pair in self.open_interest and oi == self.open_interest[pair]:
                     continue
                 self.open_interest[pair] = oi

@@ -44,6 +44,7 @@ class OKEx_swap(OKCoin):
         super().__init__(pairs=pairs, channels=channels, callbacks=callbacks, **kwargs)
         self.address = 'wss://real.okex.com:8443/ws/v3'
         self.book_depth = 200
+        self.open_interest = {}
 
     @staticmethod
     def get_active_symbols_info():

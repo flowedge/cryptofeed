@@ -55,7 +55,7 @@ class OKCoin(Feed):
         for update in msg['data']:
             pair = update['instrument_id']
             update_timestamp = timestamp_normalize(self.id, update['timestamp'])
-            await self.callback(TICKER, feed=self.id,
+            await self.callback(callback_type, feed=self.id,
                                 pair=pair,
                                 bid=Decimal(update['best_bid']),
                                 ask=Decimal(update['best_ask']),

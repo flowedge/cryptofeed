@@ -53,7 +53,7 @@ class OKCoin(Feed):
         """
 
         for update in msg['data']:
-            print(msg['data'])
+            #print(msg['data'])
             pair = update['instrument_id']
             update_timestamp = timestamp_normalize(self.id, update['timestamp'])
             await self.callback(TICKER, feed=self.id,

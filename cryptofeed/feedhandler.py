@@ -17,11 +17,9 @@ from websockets import ConnectionClosed
 from cryptofeed.defines import L2_BOOK, BLOCKCHAIN
 from cryptofeed.exchange.blockchain import Blockchain
 from cryptofeed.log import get_logger
-from cryptofeed.defines import DERIBIT, BINANCE, GEMINI, HITBTC, BITFINEX, BITMEX, BITSTAMP, POLONIEX, COINBASE, KRAKEN, KRAKEN_FUTURES, HUOBI, HUOBI_DM, OKCOIN, OKEX, OKEX_SWAP, OKEX_FUTURES, COINBENE, BYBIT, BITTREX, BITCOINCOM, BINANCE_US, BITMAX, BINANCE_JERSEY, BINANCE_FUTURES, UPBIT, HUOBI_SWAP
+from cryptofeed.defines import DERIBIT, BINANCE, GEMINI, HITBTC, BITFINEX, BITMEX, BITSTAMP, POLONIEX, COINBASE, KRAKEN, KRAKEN_FUTURES, HUOBI, HUOBI_DM, OKCOIN, OKEX, OKEX_SWAP, OKEX_FUTURES, COINBENE, BYBIT, BITTREX, BITCOINCOM, BINANCE_US, BITMAX, BINANCE_JERSEY, BINANCE_FUTURES, UPBIT, HUOBI_SWAP, FTX_US
 from cryptofeed.defines import EXX as EXX_str
 from cryptofeed.defines import FTX as FTX_str
-from cryptofeed.defines import FTX_US as FTX_US_str
-from cryptofeed.defines import DSX as DSX_str
 from cryptofeed.exchanges import *
 from cryptofeed.nbbo import NBBO
 from cryptofeed.feed import RestFeed
@@ -48,10 +46,9 @@ _EXCHANGES = {
     COINBASE: Coinbase,
     COINBENE: Coinbene,
     DERIBIT: Deribit,
-    DSX_str: DSX,
     EXX_str: EXX,
     FTX_str: FTX,
-    FTX_US_str: FTXUS,
+    FTX_US: FTXUS,
     GEMINI: Gemini,
     HITBTC: HitBTC,
     HUOBI_DM: HuobiDM,
@@ -146,7 +143,7 @@ class FeedHandler:
 
         try:
             loop = asyncio.get_event_loop()
-            # Good to endable when debugging
+            # Good to enable when debugging
             # loop.set_debug(True)
 
             for feed in self.feeds:
@@ -207,7 +204,7 @@ class FeedHandler:
                 # close the connection and reconnect in the event that no message from the exchange
                 # has been received (as opposed to a missing ping)
                 async with websockets.connect(feed.address, ping_interval=30, ping_timeout=None,
-                        max_size=2**23, origin=feed.origin) as websocket:
+                        max_size=2**23, max_queue=None, origin=feed.origin) as websocket:
                     asyncio.ensure_future(self._watch(feed.uuid, websocket))
                     # connection was successful, reset retry count and delay
                     retries = 0

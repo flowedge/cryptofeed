@@ -5,7 +5,7 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 import logging
-from yapic import json
+import json
 from decimal import Decimal
 import zlib
 

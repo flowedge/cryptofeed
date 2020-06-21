@@ -100,8 +100,9 @@ def coinbase_pairs():
 
 
 def dsx_pairs():
-    r = requests.get('https://api.dsxglobal.com/api/2/public/symbol').json()
-    return {f"{e['baseCurrency']}{PAIR_SEP}{e['quoteCurrency']}": e['id'] for e in r}
+    r = requests.get('https://dsxglobal.com/mapi/v2/info').json()
+    data = r['pairs']
+    return {f"{data[symbol]['base_currency']}{PAIR_SEP}{data[symbol]['quoted_currency']}": symbol for symbol in data}
 
 
 def gemini_pairs():
@@ -202,12 +203,13 @@ def huobi_pairs():
 def huobi_dm_pairs():
     """
     Mapping is, for instance: {"BTC_CW":"BTC190816"}
-    See comments in exchange/houbi_dm.py
+    See comments in exchange/huobi_dm.py
     """
     mapping = {
         "this_week": "CW",
         "next_week": "NW",
-        "quarter": "CQ"
+        "quarter": "CQ",
+        "next_quarter": "NQ"
     }
     r = requests.get('https://www.hbdm.com/api/v1/contract_contract_info').json()
     pairs = {}
@@ -296,5 +298,4 @@ _exchange_function_map = {
     BITCOINCOM: bitcoincom_pairs,
     BITMAX: bitmax_pairs,
     UPBIT: upbit_pairs,
-    DSX: dsx_pairs
 }

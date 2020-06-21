@@ -98,13 +98,6 @@ def coinbase_pairs():
     r = requests.get('https://api.pro.coinbase.com/products').json()
     return {data['id'].replace("-", PAIR_SEP): data['id'] for data in r}
 
-
-def dsx_pairs():
-    r = requests.get('https://dsxglobal.com/mapi/v2/info').json()
-    data = r['pairs']
-    return {f"{data[symbol]['base_currency']}{PAIR_SEP}{data[symbol]['quoted_currency']}": symbol for symbol in data}
-
-
 def gemini_pairs():
     ret = {}
     r = requests.get('https://api.gemini.com/v1/symbols').json()

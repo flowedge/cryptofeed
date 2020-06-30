@@ -66,7 +66,7 @@ _EXCHANGES = {
 
 
 class FeedHandler:
-    def __init__(self, retries=10, timeout_interval=10, log_messages_on_error=False, raw_message_capture=None, handler_enabled=True):
+    def __init__(self, retries=50, timeout_interval=30, log_messages_on_error=True, raw_message_capture=None, handler_enabled=True):
         """
         retries: int
             number of times the connection will be retried (in the event of a disconnect or other failure)
@@ -144,7 +144,7 @@ class FeedHandler:
         try:
             loop = asyncio.get_event_loop()
             # Good to enable when debugging
-            # loop.set_debug(True)
+            loop.set_debug(True)
 
             for feed in self.feeds:
                 if isinstance(feed, RestFeed):

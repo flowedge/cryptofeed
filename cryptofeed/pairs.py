@@ -7,12 +7,19 @@ associated with this software.
 
 Pair generation code for exchanges
 '''
+
+import logging
+
 import requests
 
-from cryptofeed.defines import BITSTAMP, BITFINEX, COINBASE, GEMINI, HITBTC, POLONIEX, KRAKEN, BINANCE, BINANCE_US, BINANCE_JERSEY, BINANCE_FUTURES, EXX, HUOBI, HUOBI_DM, OKCOIN, OKEX, OKEX_SWAP, OKEX_FUTURES, COINBENE, BYBIT, FTX, FTX_US, BITTREX, BITCOINCOM, BITMAX, UPBIT, BLOCKCHAIN
+from cryptofeed.defines import BITSTAMP, BITFINEX, COINBASE, GEMINI, HITBTC, POLONIEX, KRAKEN, BINANCE, BINANCE_US, BINANCE_JERSEY, BINANCE_FUTURES, EXX, HUOBI, HUOBI_DM, HUOBI_SWAP, OKCOIN, OKEX, OKEX_SWAP, COINBENE, BYBIT, FTX, FTX_US, BITTREX, BITCOINCOM, BITMAX, UPBIT, BLOCKCHAIN
 
+LOG = logging.getLogger('feedhandler')
 
 PAIR_SEP = '-'
+
+
+_pairs_retrieval_cache = dict()
 
 
 def set_pair_separator(symbol: str):
@@ -21,7 +28,12 @@ def set_pair_separator(symbol: str):
 
 
 def gen_pairs(exchange):
-    return _exchange_function_map[exchange]()
+    if exchange not in _pairs_retrieval_cache:
+        LOG.info("%s: Getting list of pairs", exchange)
+        pairs = _exchange_function_map[exchange]()
+        LOG.info("%s: %s pairs", exchange, len(pairs))
+        _pairs_retrieval_cache[exchange] = pairs
+    return _pairs_retrieval_cache[exchange]
 
 
 def _binance_pairs(endpoint: str):
@@ -57,11 +69,9 @@ def bitfinex_pairs():
         pair = data[0]
         if pair[0] == 'f':
             continue
-        else:
-            normalized = pair[1:-3] + PAIR_SEP + pair[-3:]
-            normalized = normalized.replace('UST', 'USDT')
-            ret[normalized] = pair
-
+        normalized = pair[1:-3] + PAIR_SEP + pair[-3:]
+        normalized = normalized.replace('UST', 'USDT')
+        ret[normalized] = pair
     return ret
 
 
@@ -84,6 +94,7 @@ def ftx_pairs():
         ret[normalized] = pair
     return ret
 
+
 def ftx_us_pairs():
     ret = {}
     r = requests.get('https://ftx.us/api/markets').json()
@@ -105,7 +116,6 @@ def gemini_pairs():
     for pair in r:
         std = f"{pair[:-3]}{PAIR_SEP}{pair[-3:]}"
         std = std.upper()
-        ret[std] = pair
         ret[std] = pair.upper()
 
     return ret
@@ -185,12 +195,20 @@ def exx_pairs():
 
     exchange = [key.upper() for key in r.keys()]
     pairs = [key.replace("_", PAIR_SEP) for key in exchange]
-    return {pair: exchange for pair, exchange in zip(pairs, exchange)}
+    return dict(zip(pairs, exchange))
+
+
+def huobi_common_pairs(url: str):
+    r = requests.get(url).json()
+    return {'{}{}{}'.format(e['base-currency'].upper(), PAIR_SEP, e['quote-currency'].upper()): '{}{}'.format(e['base-currency'], e['quote-currency']) for e in r['data']}
 
 
 def huobi_pairs():
-    r = requests.get('https://api.huobi.pro/v1/common/symbols').json()
-    return {'{}{}{}'.format(e['base-currency'].upper(), PAIR_SEP, e['quote-currency'].upper()): '{}{}'.format(e['base-currency'], e['quote-currency']) for e in r['data']}
+    return huobi_common_pairs('https://api.huobi.pro/v1/common/symbols')
+
+
+def huobi_us_pairs():
+    return huobi_common_pairs('https://api.huobi.com/v1/common/symbols')
 
 
 def huobi_dm_pairs():
@@ -207,8 +225,13 @@ def huobi_dm_pairs():
     r = requests.get('https://www.hbdm.com/api/v1/contract_contract_info').json()
     pairs = {}
     for e in r['data']:
-        pairs["{}_{}".format(e['symbol'], mapping[e['contract_type']])] = e['contract_code']
+        pairs[f"{e['symbol']}_{mapping[e['contract_type']]}"] = e['contract_code']
+    return pairs
+
+
+def huobi_swap_pairs():
     r = requests.get('https://api.hbdm.com/swap-api/v1/swap_contract_info').json()
+    pairs = {}
     for e in r['data']:
         pairs[e['contract_code']] = e['contract_code']
     return pairs
@@ -257,8 +280,9 @@ def upbit_pairs():
     r = requests.get('https://api.upbit.com/v1/market/all').json()
     return {f"{data['market'].split('-')[1]}{PAIR_SEP}{data['market'].split('-')[0]}": data['market'] for data in r}
 
+
 def blockchain_pairs():
-    r= requests.get("https://api.blockchain.com/mercury-gateway/v1/instruments").json()
+    r = requests.get("https://api.blockchain.com/mercury-gateway/v1/instruments").json()
     return {data["symbol"].replace("-", PAIR_SEP): data["symbol"] for data in r}
 
 
@@ -279,6 +303,7 @@ _exchange_function_map = {
     EXX: exx_pairs,
     HUOBI: huobi_pairs,
     HUOBI_DM: huobi_dm_pairs,
+    HUOBI_SWAP: huobi_swap_pairs,
     OKCOIN: okcoin_pairs,
     OKEX: okex_pairs,
     OKEX_SWAP: okex_swap_pairs,

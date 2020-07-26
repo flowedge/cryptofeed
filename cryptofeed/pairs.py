@@ -285,6 +285,16 @@ def blockchain_pairs():
     r = requests.get("https://api.blockchain.com/mercury-gateway/v1/instruments").json()
     return {data["symbol"].replace("-", PAIR_SEP): data["symbol"] for data in r}
 
+def bitmex_pairs():
+    r = requests.get('https://www.bitmex.com/api/v1/instrument/active').json()
+    return {f"{data['symbol']}{PAIR_SEP}{data['quoteCurrency']}": data['symbol'] for data in r}
+
+
+def deribit_pairs():
+    r = requests.get('https://www.deribit.com/api/v2/public/get_instruments?currency=BTC').json()
+    return {f"{data['instrument_name']}{PAIR_SEP}{data['quote_currency']}": data['instrument_name'] for data in r['result']}
+
+
 
 _exchange_function_map = {
     BITFINEX: bitfinex_pairs,
@@ -316,4 +326,6 @@ _exchange_function_map = {
     BITCOINCOM: bitcoincom_pairs,
     BITMAX: bitmax_pairs,
     UPBIT: upbit_pairs,
+    DERIBIT: deribit_pairs,
+    BITMEX: bitmex_pairs,
 }

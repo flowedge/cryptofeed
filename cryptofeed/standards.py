@@ -185,6 +185,7 @@ _feed_to_exchange_map = {
         BLOCKCHAIN: UNSUPPORTED,
         HUOBI: UNSUPPORTED,
         HUOBI_DM: UNSUPPORTED,
+        HUOBI_SWAP: UNSUPPORTED,
         OKCOIN: 'spot/ticker',
         OKEX: 'spot/ticker',
         OKEX_SWAP: 'swap/ticker',

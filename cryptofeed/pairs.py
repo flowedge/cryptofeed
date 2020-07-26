@@ -329,3 +329,5 @@ _exchange_function_map = {
     DERIBIT: deribit_pairs,
     BITMEX: bitmex_pairs,
 }
+if __name__ == "__main__":
+    print(deribit_pairs())

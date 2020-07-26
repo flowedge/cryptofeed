@@ -126,6 +126,7 @@ _feed_to_exchange_map = {
         EXX: UNSUPPORTED,
         HUOBI: UNSUPPORTED,
         HUOBI_DM: UNSUPPORTED,
+        HUOBI_SWAP: UNSUPPORTED,
         OKCOIN: UNSUPPORTED,
         OKEX: UNSUPPORTED,
         BYBIT: UNSUPPORTED,

@@ -25,11 +25,13 @@ class BackendBookDeltaCallback:
 
 
 class BackendTradeCallback:
-    async def __call__(self, *, feed: str, pair: str, side: str, amount: Decimal, price: Decimal, order_id=None, timestamp: float, receipt_timestamp: float):
+    async def __call__(self, *, feed: str, pair: str, side: str, amount: Decimal, price: Decimal, order_id=None, block_trade_id=None, timestamp: float, receipt_timestamp: float):
         data = {'feed': feed, 'pair': pair, 'timestamp': timestamp, 'receipt_timestamp': receipt_timestamp,
                 'side': side, 'amount': self.numeric_type(amount), 'price': self.numeric_type(price)}
         if order_id:
             data['id'] = order_id
+        if block_trade_id:
+            data['block_trade_id'] = block_trade_id
         await self.write(feed, pair, timestamp, receipt_timestamp, data)
 
 

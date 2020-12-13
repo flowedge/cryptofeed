@@ -77,6 +77,7 @@ class Deribit(Feed):
             await self.callback(TRADES,
                                 feed=self.id,
                                 pair=trade["instrument_name"],
+                                block_trade_id=trade['block_trade_id'],
                                 order_id=trade['trade_id'],
                                 side=BUY if trade['direction'] == 'buy' else SELL,
                                 amount=Decimal(trade['amount']),
@@ -91,6 +92,7 @@ class Deribit(Feed):
                                     side=BUY if trade['direction'] == 'buy' else SELL,
                                     leaves_qty=Decimal(trade['amount']),
                                     price=Decimal(trade['price']),
+                                    block_trade_id=trade['block_trade_id'],
                                     order_id=trade['trade_id'],
                                     receipt_timestamp=timestamp
                                     )

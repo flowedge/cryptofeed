@@ -4,21 +4,21 @@ Copyright (C) 2017-2020  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
-import time
-from time import sleep
-from yapic import json
 import hashlib
 import hmac
 import logging
+import time
 from decimal import Decimal
+from time import sleep
 
-from sortedcontainers import SortedDict as sd
 import pandas as pd
 import requests
+from sortedcontainers import SortedDict as sd
+from yapic import json
 
+from cryptofeed.defines import BID, ASK, BITFINEX, BUY, SELL
 from cryptofeed.rest.api import API, request_retry
-from cryptofeed.defines import BITFINEX, SELL, BUY, BID, ASK
-from cryptofeed.standards import pair_std_to_exchange, pair_exchange_to_std, timestamp_normalize
+from cryptofeed.standards import pair_exchange_to_std, pair_std_to_exchange, timestamp_normalize
 
 
 REQUEST_LIMIT = 5000
@@ -221,7 +221,7 @@ class Bitfinex(API):
                 else:
                     order_id, price, amount = entry
                     update = abs(amount)
-                side = BID if (amount > 0 and funding == False) or (amount < 0 and funding == True) else ASK
+                side = BID if (amount > 0 and not funding) or (amount < 0 and funding) else ASK
                 if price not in ret[sym][side]:
                     ret[sym][side][price] = {order_id: update}
                 else:
@@ -234,6 +234,6 @@ class Bitfinex(API):
                 else:
                     price, _, amount = entry
                     update = abs(amount)
-                side = BID if (amount > 0 and funding == False) or (amount < 0 and funding == True) else ASK
+                side = BID if (amount > 0 and not funding) or (amount < 0 and funding) else ASK
                 ret[sym][side][price] = update
         return ret

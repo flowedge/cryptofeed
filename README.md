@@ -24,7 +24,7 @@ See more options, explanations and Pipenv usage in [INSTALL.md](https://github.c
 
 ## Examples
 
-Please see the [examples](https://github.com/bmoscon/cryptofeed/tree/master/examples) for more code samples and the [documentation](https://github.com/bmoscon/cryptofeed/blob/master/docs/README.md) for more information about the library useage. The [FAQ](https://github.com/bmoscon/cryptofeed/tree/master/FAQ.md) contains a few oddities/gotchas as well as answers to common questions.
+Please see the [examples](https://github.com/bmoscon/cryptofeed/tree/master/examples) for more code samples and the [documentation](https://github.com/bmoscon/cryptofeed/blob/master/docs/README.md) for more information about the library usage. The [FAQ](https://github.com/bmoscon/cryptofeed/tree/master/FAQ.md) contains a few oddities/gotchas as well as answers to common questions.
 
 
 ```python
@@ -51,33 +51,41 @@ To see an example of an application using cryptofeed to aggregate and store cryp
 
 ## Supported exchanges
 
-* Binance
-* Binance US
-* Binance Jersey
-* Binance Futures
-* Bitcoin.com
-* Bitfinex
-* BitMax
-* BitMEX
-* Bitstamp
-* Bittrex
-* Blockchain
-* Bybit
-* Coinbase
-* Deribit
-* EXX
-* FTX
-* FTX US
-* Gemini
-* HitBTC
-* Huobi
-* HuobiDM
-* Kraken
-* Kraken Futures
-* OKCoin
-* OKEx
-* Poloniex
-* Upbit
+* [Bitcoin.com](https://www.bitcoin.com/)
+* [Bitfinex](https://bitfinex.com)
+* [BitMax](https://bitmax.io/) (BTMX)
+* [Bitstamp](https://www.bitstamp.net/)
+* [Bittrex](https://global.bittrex.com/)
+* [Blockchain.com](https://www.blockchain.com/)
+* [Bybit](https://www.bybit.com/)
+* [Binance](https://www.binance.com/en)
+* [Binance Delivery](https://binance-docs.github.io/apidocs/delivery/en/)
+* [Binance Futures](https://www.binance.com/en/futures)
+* [Binance US](https://www.binance.us/en)
+* [BitMEX](https://www.bitmex.com/)
+* [Coinbase](https://www.coinbase.com/) (GDAX)
+* [Deribit](https://www.deribit.com/)
+* [EXX](https://www.exx.com/)
+* [FTX](https://ftx.com/)
+* [FTX US](https://ftx.us/)
+* [Gate.io](https://www.gate.io/)
+* [Gemini](https://gemini.com/)
+* [HitBTC](https://hitbtc.com/)
+* [Huobi](https://www.hbg.com/)
+* [Huobi DM](https://www.huobi.com/en-us/markets/hb_dm/)
+* Huobi Swap
+* [Kraken](https://www.kraken.com/)
+* [Kraken Futures](https://futures.kraken.com/)
+* [OKCoin](http://okcoin.com/)
+* [OKEx](https://www.okex.com/)
+* [Poloniex](https://www.poloniex.com/)
+* [ProBit](https://www.probit.com/)
+* [Upbit](https://sg.upbit.com/home)
+
+## Supported aggregated crypto data providers
+
+* [Coingecko](https://www.coingecko.com/en)
+* [Whale Alert](https://whale-alert.io/)
 
 ## National Best Bid/Offer (NBBO)
 
@@ -103,18 +111,22 @@ fh.run()
 
 ## Supported Channels
 
-Cryptofeed supports the following channels:
+Cryptofeed supports the following channels from exchanges:
 
 * L2_BOOK - Price aggregated sizes. Some exchanges provide the entire depth, some provide a subset.
 * L3_BOOK - Price aggregated orders. Like the L2 book, some exchanges may only provide partial depth.
-* TRADES - Note this reports the taker's side, even for exchanges that report the maker side
+* TRADES - Note this reports the taker's side, even for exchanges that report the maker side.
 * TICKER
 * VOLUME
 * FUNDING
 * BOOK_DELTA - Subscribed to with L2 or L3 books, receive book deltas rather than the entire book on updates. Full updates will be periodically sent on the L2 or L3 channel. If BOOK_DELTA is enabled, only L2 or L3 book can be enabled, not both. To receive both create two `feedhandler` objects. Not all exchanges are supported, as some exchanges send complete books on every update.
-* *_SWAP (L2/L3 Books, Trades, Ticker) - Swap data on supporting exchanges
-* *_FUTURES (L2/L3 Books, Trades, Ticker) - Futures data on supporting exchanges
-* OPEN_INTEREST - Open interest data
+* OPEN_INTEREST - Open interest data.
+
+Aggregated data from provider is available in channel:
+
+* TRANSACTIONS - On-chain transactions.
+* MARKET_INFO - current aggregated price, market cap, volume (in USD, BTC or ETH currency), total and circulating supply,
+ as well as community data (twitter, reddit, facebook...) and scores (coingecko, developper, community...)
 
 ## Backends
 
@@ -133,6 +145,7 @@ Supported Backends:
 * Elastic Search
 * RabbitMQ
 * PostgreSQL
+* GCP Pub/Sub
 
 
 ## Rest API
@@ -155,6 +168,6 @@ Continue to build out rest endpoints and standardize exchange interfaces and dat
 * More ZMQ improvements/options
 
 ## Contributing
-Issues and PRs are welcomed. If you'd like to discuss ongoing development please join the [slack](https://join.slack.com/t/cryptofeed-dev/shared_invite/enQtNjY4ODIwODA1MzQ3LTIzMzY3Y2YxMGVhNmQ4YzFhYTc3ODU1MjQ5MDdmY2QyZjdhMGU5ZDFhZDlmMmYzOTUzOTdkYTZiOGUwNGIzYTk)
+Issues and PRs are welcomed. If you'd like to discuss ongoing development please join the [slack](https://join.slack.com/t/cryptofeed-dev/shared_invite/enQtNjY4ODIwODA1MzQ3LTIzMzY3Y2YxMGVhNmQ4YzFhYTc3ODU1MjQ5MDdmY2QyZjdhMGU5ZDFhZDlmMmYzOTUzOTdkYTZiOGUwNGIzYTk) or open a thread in the [discussions](https://github.com/bmoscon/cryptofeed/discussions) in GitHub.
 
-This wouldn't have been possible with the many [contributors](AUTHORS.md)! I owe them and all who have contributed in other ways my thanks!
+This wouldn't have been possible without the help of many [contributors](AUTHORS.md)! I owe them and all other contribtors my thanks!

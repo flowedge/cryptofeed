@@ -8,22 +8,43 @@ import uuid
 from collections import defaultdict
 
 from cryptofeed.callback import Callback
-from cryptofeed.standards import pair_std_to_exchange, feed_to_exchange, load_exchange_pair_mapping
-from cryptofeed.defines import TRADES, TICKER, L2_BOOK, L3_BOOK, VOLUME, FUNDING, BOOK_DELTA, OPEN_INTEREST, BID, ASK, LIQUIDATIONS
+from cryptofeed.defines import (ASK, BID, BOOK_DELTA, FUNDING, FUTURES_INDEX, L2_BOOK, L3_BOOK, LIQUIDATIONS,
+                                OPEN_INTEREST, MARKET_INFO, TICKER, TRADES, TRANSACTIONS, VOLUME)
+from cryptofeed.exceptions import BidAskOverlapping, UnsupportedDataFeed
+from cryptofeed.standards import feed_to_exchange, get_exchange_info, load_exchange_pair_mapping, pair_std_to_exchange
 from cryptofeed.util.book import book_delta, depth
-from cryptofeed.exceptions import BidAskOverlapping
 
 
 class Feed:
     id = 'NotImplemented'
 
-
-    def __init__(self, address, pairs=None, channels=None, config=None, callbacks=None, max_depth=None, book_interval=1000, cross_check=False, origin=None):
+    def __init__(self, address, pairs=None, channels=None, config=None, callbacks=None, max_depth=None, book_interval=1000, snapshot_interval=False, checksum_validation=False, cross_check=False, origin=None,
+                 key_id=None):
+        """
+        max_depth: int
+            Maximum number of levels per side to return in book updates
+        book_interval: int
+            Number of updates between snapshots. Only applicable when book deltas are enabled.
+            Book deltas are enabled by subscribing to the book delta callback.
+        snapshot_interval: bool/int
+            Number of updates between snapshots. Only applicable when book delta is not enabled.
+            Updates between snapshots are not delivered to the client
+        checksum_validation: bool
+            Toggle checksum validation, when supported by an exchange.
+        cross_check: bool
+            Toggle a check for a crossed book. Should not be needed on exchanges that support
+            checksums or provide message sequence numbers.
+        origin: str
+            Passed into websocket connect. Sets the origin header.
+        key_id: str
+            API key to query the feed, required when requesting supported coins/pairs.
+        """
         self.hash = str(uuid.uuid4())
-        self.uuid = self.id + self.hash
+        self.uuid = f"{self.id}-{self.hash}"
         self.config = defaultdict(set)
         self.address = address
         self.book_update_interval = book_interval
+        self.snapshot_interval = snapshot_interval
         self.cross_check = cross_check
         self.updates = defaultdict(int)
         self.do_deltas = False
@@ -32,7 +53,8 @@ class Feed:
         self.max_depth = max_depth
         self.previous_book = defaultdict(dict)
         self.origin = origin
-        load_exchange_pair_mapping(self.id)
+        self.checksum_validation = checksum_validation
+        load_exchange_pair_mapping(self.id, key_id=key_id)
 
         if config is not None and (pairs is not None or channels is not None):
             raise ValueError("Use config, or channels and pairs, not both")
@@ -49,14 +71,18 @@ class Feed:
 
         self.l3_book = {}
         self.l2_book = {}
-        self.callbacks = {TRADES: Callback(None),
-                          TICKER: Callback(None),
+        self.callbacks = {FUNDING: Callback(None),
+                          FUTURES_INDEX: Callback(None),
                           L2_BOOK: Callback(None),
                           L3_BOOK: Callback(None),
-                          VOLUME: Callback(None),
-                          FUNDING: Callback(None),
+                          LIQUIDATIONS: Callback(None),
                           OPEN_INTEREST: Callback(None),
-                          LIQUIDATIONS: Callback(None)}
+                          MARKET_INFO: Callback(None),
+                          TICKER: Callback(None),
+                          TRADES: Callback(None),
+                          TRANSACTIONS: Callback(None),
+                          VOLUME: Callback(None)
+                          }
 
         if callbacks:
             for cb_type, cb_func in callbacks.items():
@@ -68,6 +94,26 @@ class Feed:
             if not isinstance(callback, list):
                 self.callbacks[key] = [callback]
 
+    @classmethod
+    def info(cls, key_id: str = None) -> dict:
+        """
+        Return information about the Exchange - what trading pairs are supported, what data channels, etc
+
+        key_id: str
+            API key to query the feed, required when requesting supported coins/pairs.
+        """
+        pairs, info = get_exchange_info(cls.id, key_id=key_id)
+        data = {'pairs': list(pairs.keys()), 'channels': []}
+        for channel in (FUNDING, FUTURES_INDEX, LIQUIDATIONS, L2_BOOK, L3_BOOK, OPEN_INTEREST, MARKET_INFO, TICKER, TRADES, TRANSACTIONS, VOLUME):
+            try:
+                feed_to_exchange(cls.id, channel, silent=True)
+                data['channels'].append(channel)
+            except UnsupportedDataFeed:
+                pass
+
+        data.update(info)
+        return data
+
     async def book_callback(self, book: dict, book_type: str, pair: str, forced: bool, delta: dict, timestamp: float, receipt_timestamp: float):
         """
         Three cases we need to handle here
@@ -76,6 +122,7 @@ class Feed:
         1a. Book deltas are enabled, max depth is not, and exchange does not support deltas. Rare
         2.  Book deltas not enabled, but max depth is enabled
         3.  Neither deltas nor max depth enabled
+        4.  Book deltas disabled and snapshot intervals enabled (with/without max depth)
 
         2 and 3 can be combined into a single block as long as application of depth modification
         happens first
@@ -105,9 +152,14 @@ class Feed:
                 # We want to send a full book update but need to apply max depth first
                 _, book = await self.apply_depth(book, False, pair)
         elif self.max_depth:
-            changed, book = await self.apply_depth(book, False, pair)
-            if not changed:
-                return
+            if not self.snapshot_interval or (self.snapshot_interval and self.updates[pair] >= self.snapshot_interval):
+                changed, book = await self.apply_depth(book, False, pair)
+                if not changed:
+                    return
+        # case 4 - incremement skiped update, and exit
+        if self.snapshot_interval and self.updates[pair] < self.snapshot_interval:
+            self.updates[pair] += 1
+            return
 
         if self.cross_check:
             self.check_bid_ask_overlapping(book, pair)
@@ -142,7 +194,15 @@ class Feed:
     async def message_handler(self, msg: str, timestamp: float):
         raise NotImplementedError
 
+    async def stop(self):
+        for callbacks in self.callbacks.values():
+            for callback in callbacks:
+                if hasattr(callback, 'stop'):
+                    await callback.stop()
+
 
 class RestFeed(Feed):
+    sleep_time = None
+
     async def message_handler(self):
         raise NotImplementedError

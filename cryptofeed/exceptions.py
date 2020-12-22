@@ -36,3 +36,11 @@ class ExhaustedRetries(Exception):
 
 class BidAskOverlapping(Exception):
     pass
+
+
+class BadChecksum(Exception):
+    pass
+
+
+class RestResponseError(Exception):
+    pass

@@ -10,15 +10,18 @@ from setuptools import setup
 from setuptools import find_packages
 from setuptools.command.test import test as TestCommand
 
+
 def get_long_description():
     """Read the contents of README.md, INSTALL.md and CHANGES.md files."""
     from os import path
+
     repo_dir = path.abspath(path.dirname(__file__))
-    markdown=[]
-    for filename in ['README.md', 'INSTALL.md', 'CHANGES.md']:
-        with open(path.join(repo_dir, filename), encoding='utf-8') as markdown_file:
+    markdown = []
+    for filename in ["README.md", "INSTALL.md", "CHANGES.md"]:
+        with open(path.join(repo_dir, filename), encoding="utf-8") as markdown_file:
             markdown.append(markdown_file.read())
     return "\n\n----\n\n".join(markdown)
+
 
 class Test(TestCommand):
     def run_tests(self):
@@ -29,17 +32,20 @@ class Test(TestCommand):
 
 setup(
     name="cryptofeed",
-    version="1.5.0",
+    version="1.6.2",
     author="Bryant Moscon",
     author_email="bmoscon@gmail.com",
-    description="Cryptocurrency feed handler and synthetic NBBO feed",
+    description="Cryptocurrency Exchange Websocket Data Feed Handler",
     long_description=get_long_description(),
     long_description_content_type="text/markdown",
     license="XFree86",
-    keywords=["cryptocurrency", "bitcoin", "btc", "feed handler", "market feed", "market data"],
+    keywords=["cryptocurrency", "bitcoin", "btc", "feed handler", "market feed", "market data",
+              "Bitcoin.com", "Bitfinex", "BitMax", "Bitstamp", "Bittrex", "Blockchain.com", "Bybit",
+              "Binance", "BitMEX", "CoinBene", "Coinbase", "Deribit", "EXX", "FTX", "Gemini",
+              "HitBTC", "Huobi", "Kraken", "OKCoin", "OKEx", "Poloniex", "Upbit"],
     url="https://github.com/bmoscon/cryptofeed",
     packages=find_packages(exclude=['tests*']),
-    package_data={'': ['rest/config.yaml']},
+    package_data={'': ['cryptofeed/config.yaml']},
     cmdclass={'test': Test},
     python_requires='>=3.7',
     classifiers=[
@@ -50,28 +56,39 @@ setup(
         "Programming Language :: Python :: 3.8",
         "Framework :: AsyncIO",
     ],
-    tests_require=["pytest", "pyyaml"],
+    tests_require=["pytest"],
     install_requires=[
         "requests>=2.18.4",
         "websockets>=7.0",
         "sortedcontainers>=1.5.9",
         "pandas",
-        "aiohttp==3.6.2",
-        "aiofile",
-        'yapic.json>=1.4.3',
+        "pyyaml",
+        "aiohttp>=3.7.1",
+        "aiofile>=2.0.0",
+        "yapic.json>=1.4.3",
         # Two (optional) dependencies that speed up Cryptofeed:
-        'aiodns>=1.1',   # aiodns speeds up DNS resolving
-        'cchardet',      # cchardet is a faster replacement for chardet
-],
+        "aiodns>=1.1",  # aiodns speeds up DNS resolving
+        "cchardet",     # cchardet is a faster replacement for chardet
+    ],
     extras_require={
-        'rest_api': ['pyyaml'],
-        'redis': ['aioredis'],
-        'arctic': ['arctic'],
-        'zmq': ['pyzmq'],
-        'mongo': ['motor'],
-        'kafka': ['aiokafka'],
-        'rabbit': ['aio_pika', 'pika'],
-        'postgres': ['asyncpg'],
-        'all': ['pyyaml', 'aioredis', 'arctic', 'pyzmq', 'motor', 'aiokafka', 'aio_pika', 'pika', 'asyncpg'],
+        "redis": ["aioredis"],
+        "arctic": ["arctic"],
+        "zmq": ["pyzmq"],
+        "mongo": ["motor"],
+        "kafka": ["aiokafka>=0.7.0"],
+        "rabbit": ["aio_pika", "pika"],
+        "postgres": ["asyncpg"],
+        "gcp_pubsub": ["google_cloud_pubsub", "gcloud_aio_pubsub"],
+        "all": [
+            "aioredis",
+            "arctic",
+            "pyzmq",
+            "motor",
+            "aiokafka>=0.7.0",
+            "aio_pika",
+            "pika",
+            "asyncpg",
+            "gcp_pubsub"
+        ],
     },
 )

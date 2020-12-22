@@ -26,15 +26,15 @@ So we return BTC190927 as the pair name for the BTC quarterly future.
 
 '''
 import logging
-from yapic import json
-from decimal import Decimal
 import zlib
+from decimal import Decimal
 
 from sortedcontainers import SortedDict as sd
+from yapic import json
 
-from cryptofeed.defines import HUOBI_DM, BUY, SELL, TRADES, BID, ASK, L2_BOOK
+from cryptofeed.defines import BID, ASK, BUY, HUOBI_DM, L2_BOOK, SELL, TRADES
 from cryptofeed.feed import Feed
-from cryptofeed.standards import pair_std_to_exchange, pair_exchange_to_std, timestamp_normalize
+from cryptofeed.standards import pair_exchange_to_std, pair_std_to_exchange, timestamp_normalize
 
 
 LOG = logging.getLogger('feedhandler')
@@ -73,22 +73,26 @@ class HuobiDM(Feed):
         data = msg['tick']
         forced = pair not in self.l2_book
 
-        update = {
-            BID: sd({
-                Decimal(price): Decimal(amount)
-                for price, amount in data['bids']
-            }),
-            ASK: sd({
-                Decimal(price): Decimal(amount)
-                for price, amount in data['asks']
-            })
-        }
+        # When Huobi Delists pairs, empty updates still sent:
+        # {'ch': 'market.AKRO-USD.depth.step0', 'ts': 1606951241196, 'tick': {'mrid': 50651100044, 'id': 1606951241, 'ts': 1606951241195, 'version': 1606951241, 'ch': 'market.AKRO-USD.depth.step0'}}
+        # {'ch': 'market.AKRO-USD.depth.step0', 'ts': 1606951242297, 'tick': {'mrid': 50651100044, 'id': 1606951242, 'ts': 1606951242295, 'version': 1606951242, 'ch': 'market.AKRO-USD.depth.step0'}}
+        if 'bids' in data and 'asks' in data:
+            update = {
+                BID: sd({
+                    Decimal(price): Decimal(amount)
+                    for price, amount in data['bids']
+                }),
+                ASK: sd({
+                    Decimal(price): Decimal(amount)
+                    for price, amount in data['asks']
+                })
+            }
 
-        if not forced:
-            self.previous_book[pair] = self.l2_book[pair]
-        self.l2_book[pair] = update
+            if not forced:
+                self.previous_book[pair] = self.l2_book[pair]
+            self.l2_book[pair] = update
 
-        await self.book_callback(self.l2_book[pair], L2_BOOK, pair, forced, False, timestamp_normalize(self.id, msg['ts']), timestamp)
+            await self.book_callback(self.l2_book[pair], L2_BOOK, pair, forced, False, timestamp_normalize(self.id, msg['ts']), timestamp)
 
     async def _trade(self, msg: dict, timestamp: float):
         """

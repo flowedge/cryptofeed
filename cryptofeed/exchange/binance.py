@@ -4,19 +4,19 @@ Copyright (C) 2017-2020  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
-from yapic import json
+import asyncio
 import logging
-from decimal import Decimal
 from collections import defaultdict
+from datetime import datetime
+from decimal import Decimal
+from time import time
 
 import aiohttp
-import asyncio
-from time import time as time
-from datetime import datetime as datetime
 from sortedcontainers import SortedDict as sd
+from yapic import json
 
+from cryptofeed.defines import BID, ASK, BINANCE, BUY, FUNDING, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, SELL, TICKER, TRADES
 from cryptofeed.feed import Feed
-from cryptofeed.defines import TICKER, TRADES, BUY, SELL, BID, ASK, L2_BOOK, BINANCE, LIQUIDATIONS, OPEN_INTEREST
 from cryptofeed.standards import pair_exchange_to_std, timestamp_normalize
 
 
@@ -37,8 +37,6 @@ class Binance(Feed):
     def _address(self):
         address = self.ws_endpoint + '/stream?streams='
         for chan in self.channels if not self.config else self.config:
-            if chan == OPEN_INTEREST:
-                continue
             for pair in self.pairs if not self.config else self.config[chan]:
                 pair = pair.lower()
                 stream = f"{pair}@{chan}/"
@@ -144,8 +142,8 @@ class Binance(Feed):
                             leaves_qty=Decimal(msg['o']['q']),
                             price=Decimal(msg['o']['p']),
                             order_id=None,
+                            timestamp=timestamp_normalize(self.id, msg['E']),
                             receipt_timestamp=timestamp)
-
 
     async def _snapshot(self, pair: str) -> None:
         url = f'{self.rest_endpoint}/depth?symbol={pair}&limit={self.book_depth}'
@@ -245,18 +243,18 @@ class Binance(Feed):
         async with aiohttp.ClientSession() as session:
             while True:
                 for pair in pairs:
-                    end_point = f"https://fapi.binance.com/fapi/v1/openInterest?symbol={pair}"
+                    end_point = f"{self.rest_endpoint}/openInterest?symbol={pair}"
                     async with session.get(end_point) as response:
                         data = await response.text()
                         data = json.loads(data, parse_float=Decimal)
+
                         oi = data['openInterest']
-                        saved_oi = self.open_interest.get(pair, None)
                         if oi != self.open_interest.get(pair, None):
                             await self.callback(OPEN_INTEREST,
                                                 feed=self.id,
-                                                pair=pair,
+                                                pair=pair_exchange_to_std(pair),
                                                 open_interest=oi,
-                                                timestamp=data['time'],
+                                                timestamp=timestamp_normalize(self.id, data['time']),
                                                 receipt_timestamp=time()
                                                 )
                             self.open_interest[pair] = oi
@@ -264,6 +262,27 @@ class Binance(Feed):
                 # Binance updates OI every 15 minutes, however not all pairs are ready exactly at :15 :30 :45 :00
                 wait_time = (17 - (datetime.now().minute % 15)) * 60
                 await asyncio.sleep(wait_time)
+
+    async def _funding(self, msg: dict, timestamp: float):
+        """
+        {
+            "e": "markPriceUpdate",  // Event type
+            "E": 1562305380000,      // Event time
+            "s": "BTCUSDT",          // Symbol
+            "p": "11185.87786614",   // Mark price
+            "r": "0.00030000",       // Funding rate
+            "T": 1562306400000       // Next funding time
+        }
+        """
+        await self.callback(FUNDING,
+                            feed=self.id,
+                            pair=pair_exchange_to_std(msg['s']),
+                            timestamp=timestamp_normalize(self.id, msg['E']),
+                            receipt_timestamp=timestamp,
+                            mark_price=msg['p'],
+                            rate=msg['r'],
+                            next_funding_time=timestamp_normalize(self.id, msg['T']),
+                            )
 
     async def message_handler(self, msg: str, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)
@@ -283,6 +302,8 @@ class Binance(Feed):
             await self._ticker(msg, timestamp)
         elif msg['e'] == 'forceOrder':
             await self._liquidations(msg, timestamp)
+        elif msg['e'] == 'markPriceUpdate':
+            await self._funding(msg, timestamp)
         else:
             LOG.warning("%s: Unexpected message received: %s", self.id, msg)
 

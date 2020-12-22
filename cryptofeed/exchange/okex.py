@@ -7,7 +7,12 @@ associated with this software.
 from cryptofeed.defines import OKEX, OKEX_SWAP, OKEX_FUTURES
 from cryptofeed.exchange.okcoin import OKCoin
 
+import aiohttp
 import requests
+from yapic import json
+
+from cryptofeed.defines import OKEX, LIQUIDATIONS, BUY, SELL
+from cryptofeed.exchange.okcoin import OKCoin
 
 
 class OKEx(OKCoin):

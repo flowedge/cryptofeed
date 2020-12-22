@@ -9,17 +9,18 @@ Pair generation code for exchanges
 '''
 
 import logging
+from collections import defaultdict
 
 import requests
 
-from cryptofeed.defines import BITSTAMP, BITFINEX, COINBASE, GEMINI, HITBTC, POLONIEX, KRAKEN, BINANCE, BINANCE_US, BINANCE_JERSEY, BINANCE_FUTURES, EXX, HUOBI, HUOBI_DM, HUOBI_SWAP, OKCOIN, OKEX, OKEX_SWAP, OKEX_FUTURES, COINBENE, BYBIT, FTX, FTX_US, BITTREX, BITCOINCOM, BITMAX, UPBIT, BLOCKCHAIN, BITMEX, DERIBIT
+from cryptofeed.defines import *
 
 LOG = logging.getLogger('feedhandler')
 
 PAIR_SEP = '-'
 
-
 _pairs_retrieval_cache = dict()
+_exchange_info = defaultdict(lambda: defaultdict(dict))
 
 
 def set_pair_separator(symbol: str):
@@ -27,39 +28,42 @@ def set_pair_separator(symbol: str):
     PAIR_SEP = symbol
 
 
-def gen_pairs(exchange):
+def gen_pairs(exchange: str, key_id=None):
     if exchange not in _pairs_retrieval_cache:
         LOG.info("%s: Getting list of pairs", exchange)
-        pairs = _exchange_function_map[exchange]()
+        pairs = _exchange_function_map[exchange](key_id) if key_id else _exchange_function_map[exchange]()
         LOG.info("%s: %s pairs", exchange, len(pairs))
         _pairs_retrieval_cache[exchange] = pairs
     return _pairs_retrieval_cache[exchange]
 
 
-def _binance_pairs(endpoint: str):
+def _binance_pairs(endpoint: str, exchange: str):
     ret = {}
     pairs = requests.get(endpoint).json()
     for symbol in pairs['symbols']:
         split = len(symbol['baseAsset'])
         normalized = symbol['symbol'][:split] + PAIR_SEP + symbol['symbol'][split:]
         ret[normalized] = symbol['symbol']
+        _exchange_info[exchange]['tick_size'][normalized] = symbol['filters'][0]['tickSize']
+        if "contractType" in symbol:
+            _exchange_info[exchange]['contract_type'] = symbol['contractType']
     return ret
 
 
 def binance_pairs():
-    return _binance_pairs('https://api.binance.com/api/v1/exchangeInfo')
+    return _binance_pairs('https://api.binance.com/api/v1/exchangeInfo', BINANCE)
 
 
 def binance_us_pairs():
-    return _binance_pairs('https://api.binance.us/api/v1/exchangeInfo')
-
-
-def binance_jersey_pairs():
-    return _binance_pairs('https://api.binance.je/api/v1/exchangeInfo')
+    return _binance_pairs('https://api.binance.us/api/v1/exchangeInfo', BINANCE_US)
 
 
 def binance_futures_pairs():
-    return _binance_pairs('https://fapi.binance.com/fapi/v1/exchangeInfo')
+    return _binance_pairs('https://fapi.binance.com/fapi/v1/exchangeInfo', BINANCE_FUTURES)
+
+
+def binance_delivery_pairs():
+    return _binance_pairs('https://dapi.binance.com/dapi/v1/exchangeInfo', BINANCE_DELIVERY)
 
 
 def bitfinex_pairs():
@@ -77,37 +81,42 @@ def bitfinex_pairs():
 
 def bybit_pairs():
     ret = {}
-    r = requests.get('https://api.bybit.com/v2/public/tickers').json()
+    r = requests.get('https://api.bybit.com/v2/public/symbols').json()
     for pair in r['result']:
-        symbol = pair['symbol']
-        normalized = symbol.replace("USD", f"{PAIR_SEP}USD")
-        ret[normalized] = symbol
+        normalized = f"{pair['base_currency']}{PAIR_SEP}{pair['quote_currency']}"
+        ret[normalized] = pair['name']
+        _exchange_info[BYBIT]['tick_size'][normalized] = pair['price_filter']['tick_size']
+
+    return ret
+
+
+def _ftx_helper(endpoint: str, exchange: str):
+    ret = {}
+    r = requests.get(endpoint).json()
+    for data in r['result']:
+        normalized = data['name'].replace("/", PAIR_SEP)
+        pair = data['name']
+        ret[normalized] = pair
+        _exchange_info[exchange]['tick_size'][normalized] = data['priceIncrement']
     return ret
 
 
 def ftx_pairs():
-    ret = {}
-    r = requests.get('https://ftx.com/api/markets').json()
-    for data in r['result']:
-        normalized = data['name'].replace("/", PAIR_SEP)
-        pair = data['name']
-        ret[normalized] = pair
-    return ret
+    return _ftx_helper('https://ftx.com/api/markets', FTX)
 
 
 def ftx_us_pairs():
-    ret = {}
-    r = requests.get('https://ftx.us/api/markets').json()
-    for data in r['result']:
-        normalized = data['name'].replace("/", PAIR_SEP)
-        pair = data['name']
-        ret[normalized] = pair
-    return ret
+    return _ftx_helper('https://ftx.us/api/markets', FTX_US)
 
 
 def coinbase_pairs():
     r = requests.get('https://api.pro.coinbase.com/products').json()
-    return {data['id'].replace("-", PAIR_SEP): data['id'] for data in r}
+    ret = {}
+    for data in r:
+        normalized = data['id'].replace("-", PAIR_SEP)
+        ret[normalized] = data['id']
+        _exchange_info[COINBASE]['tick_size'][normalized] = data['quote_increment']
+    return ret
 
 def gemini_pairs():
     ret = {}
@@ -128,6 +137,8 @@ def hitbtc_pairs():
         split = len(symbol['baseCurrency'])
         normalized = symbol['id'][:split] + PAIR_SEP + symbol['id'][split:]
         ret[normalized] = symbol['id']
+        _exchange_info[HITBTC]['tick_size'][normalized] = symbol['tickSize']
+
     return ret
 
 
@@ -158,15 +169,15 @@ def kraken_pairs():
     r = requests.get('https://api.kraken.com/0/public/AssetPairs')
     data = r.json()
     for pair in data['result']:
-        alt = data['result'][pair]['altname']
-
-        if ".d" in alt:
+        if 'wsname' not in data['result'][pair] or '.d' in pair:
             # https://blog.kraken.com/post/259/introducing-the-kraken-dark-pool/
             # .d is for dark pool pairs
             continue
 
-        normalized = alt[:-3] + PAIR_SEP + alt[-3:]
-        exch = normalized.replace(PAIR_SEP, "/")
+        base, quote = data['result'][pair]['wsname'].split("/")
+
+        normalized = f"{base}{PAIR_SEP}{quote}"
+        exch = data['result'][pair]['wsname']
         normalized = normalized.replace('XBT', 'BTC')
         normalized = normalized.replace('XDG', 'DOG')
         ret[normalized] = exch
@@ -174,20 +185,7 @@ def kraken_pairs():
 
 
 def kraken_rest_pairs():
-    ret = {}
-    r = requests.get('https://api.kraken.com/0/public/AssetPairs')
-    data = r.json()
-    for pair in data['result']:
-        alt = data['result'][pair]['altname']
-        modifier = -3
-        if ".d" in alt:
-            modifier = -5
-        normalized = alt[:modifier] + PAIR_SEP + alt[modifier:]
-        exch = normalized.replace(PAIR_SEP, "")
-        normalized = normalized.replace('XBT', 'BTC')
-        normalized = normalized.replace('XDG', 'DOG')
-        ret[normalized] = exch
-    return ret
+    return {normalized: exchange.replace("/", "") for normalized, exchange in kraken_pairs().items()}
 
 
 def exx_pairs():
@@ -226,6 +224,9 @@ def huobi_dm_pairs():
     pairs = {}
     for e in r['data']:
         pairs[f"{e['symbol']}_{mapping[e['contract_type']]}"] = e['contract_code']
+        _exchange_info[HUOBI_DM]['tick_size'][e['contract_code']] = e['price_tick']
+        _exchange_info[HUOBI_DM]['short_code_mappings'][f"{e['symbol']}_{mapping[e['contract_type']]}"] = e['contract_code']
+
     return pairs
 
 
@@ -234,13 +235,20 @@ def huobi_swap_pairs():
     pairs = {}
     for e in r['data']:
         pairs[e['contract_code']] = e['contract_code']
+        _exchange_info[HUOBI_SWAP]['tick_size'][e['contract_code']] = e['price_tick']
+
     return pairs
 
 
 def okcoin_pairs():
     r = requests.get('https://www.okcoin.com/api/spot/v3/instruments').json()
-    return {e['instrument_id']: e['instrument_id'] for e in r}
-            
+    ret = {}
+    for e in r:
+        ret[e['instrument_id']] = e['instrument_id']
+        _exchange_info[OKCOIN]['tick_size'][e['instrument_id']] = e['tick_size']
+    return ret
+
+
 def okex_pairs():
     r = requests.get('https://www.okex.com/api/spot/v3/instruments').json()
     return {e['instrument_id']: e['instrument_id'] for e in r}            
@@ -296,19 +304,67 @@ def deribit_pairs():
 
 
 
+def gateio_pairs():
+    r = requests.get("https://api.gateio.ws/api/v4/spot/currency_pairs").json()
+    return {data['id'].replace("_", PAIR_SEP): data['id'] for data in r}
+
+
+def bitmex_pairs():
+    r = requests.get("https://www.bitmex.com/api/v1/instrument/active").json()
+    return {entry['symbol']: entry['symbol'] for entry in r}
+
+
+def deribit_pairs():
+    currencies = ['BTC', 'ETH']
+    kind = ['future', 'option']
+    data = []
+    for c in currencies:
+        for k in kind:
+            data.extend(requests.get(f"https://www.deribit.com/api/v2/public/get_instruments?currency={c}&expired=false&kind={k}").json()['result'])
+    return {d['instrument_name']: d['instrument_name'] for d in data}
+
+
+def kraken_future_pairs():
+    data = requests.get("https://futures.kraken.com/derivatives/api/v3/instruments").json()['instruments']
+    return {d['symbol']: d['symbol'] for d in data if d['tradeable'] is True}
+
+
+def probit_pairs():
+    r = requests.get("https://api.probit.com/api/exchange/v1/market").json()
+    return {entry['id']: entry['id'] for entry in r['data']}
+
+
+def coingecko_pairs():
+    quote_c = requests.get('https://api.coingecko.com/api/v3/coins/list').json()
+    # Normalization
+    normalized = dict({'miota': 'iota'})
+    # Base currencies are defined manually (USD + BTC + ETH).
+    # The full list from Coingecko is not used, as the generated dict of pairs would be tremendous.
+    # base_c =  requests.get('https://api.coingecko.com/api/v3/simple/supported_vs_currencies').json()
+    base_c = (('USD', 'usd'), ('BTC', 'btc'), ('ETH', 'eth'))
+    return {(f"{q['symbol']}{PAIR_SEP}{bk}".upper() if q['symbol'] not in normalized else f"{normalized[q['symbol']]}{PAIR_SEP}{bk}".upper()): f"{q['id']}_{bv}" for q in quote_c for bk, bv in base_c}
+
+
+def whale_alert_coins(key_id: str):
+    data = requests.get('https://api.whale-alert.io/v1/status?api_key={!s}'.format(key_id)).json()
+    # Same symbols, but on different blockchains (for instance USDT), are naturally overwritten.
+    return {s.upper(): s for b in data['blockchains'] for s in b['symbols'] if s}
+
+
 _exchange_function_map = {
     BITFINEX: bitfinex_pairs,
     COINBASE: coinbase_pairs,
     GEMINI: gemini_pairs,
     HITBTC: hitbtc_pairs,
     POLONIEX: poloniex_pairs,
+    PROBIT: probit_pairs,
     BITSTAMP: bitstamp_pairs,
     KRAKEN: kraken_pairs,
     KRAKEN + 'REST': kraken_rest_pairs,
     BINANCE: binance_pairs,
     BINANCE_US: binance_us_pairs,
-    BINANCE_JERSEY: binance_jersey_pairs,
     BINANCE_FUTURES: binance_futures_pairs,
+    BINANCE_DELIVERY: binance_delivery_pairs,
     BLOCKCHAIN: blockchain_pairs,
     EXX: exx_pairs,
     HUOBI: huobi_pairs,
@@ -328,6 +384,12 @@ _exchange_function_map = {
     UPBIT: upbit_pairs,
     DERIBIT: deribit_pairs,
     BITMEX: bitmex_pairs,
+    GATEIO: gateio_pairs,
+    BITMEX: bitmex_pairs,
+    DERIBIT: deribit_pairs,
+    KRAKEN_FUTURES: kraken_future_pairs,
+    COINGECKO: coingecko_pairs,
+    WHALE_ALERT: whale_alert_coins
 }
 if __name__ == "__main__":
     print(deribit_pairs())

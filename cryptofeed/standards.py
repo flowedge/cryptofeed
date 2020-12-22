@@ -12,26 +12,26 @@ data channel names
 import logging
 import pandas as pd
 
-from cryptofeed.defines import (L2_BOOK, L3_BOOK, TRADES, TICKER, OPEN_INTEREST, VOLUME, FUNDING, LIQUIDATIONS, UNSUPPORTED, BITFINEX, GEMINI, BITMAX,
-                                POLONIEX, HITBTC, BITSTAMP, COINBASE, BITMEX, KRAKEN, KRAKEN_FUTURES, BINANCE, EXX, HUOBI, HUOBI_DM, HUOBI_SWAP, OKCOIN,
-                                OKEX, OKEX_SWAP, OKEX_FUTURES, COINBENE, BYBIT, FTX, FTX_US, TRADES_SWAP, TICKER_SWAP, L2_BOOK_SWAP, TRADES_FUTURES, TICKER_FUTURES, L2_BOOK_FUTURES,
-                                LIMIT, MARKET, FILL_OR_KILL, IMMEDIATE_OR_CANCEL, MAKER_OR_CANCEL, DERIBIT, BITTREX, BITCOINCOM, BINANCE_US,
-                                BINANCE_JERSEY, BINANCE_FUTURES, UPBIT, BLOCKCHAIN)
-from cryptofeed.pairs import gen_pairs
-from cryptofeed.exceptions import UnsupportedTradingPair, UnsupportedDataFeed, UnsupportedTradingOption
-
+from cryptofeed.defines import (BINANCE, BINANCE_DELIVERY, BINANCE_FUTURES, BINANCE_US, BITCOINCOM, BITFINEX, BITMAX, BITMEX,
+                                BITSTAMP, BITTREX, BLOCKCHAIN, BYBIT, COINBASE, COINBENE, COINGECKO,
+                                DERIBIT, EXX, FTX, FTX_US, GATEIO, GEMINI, HITBTC, HUOBI, HUOBI_DM, HUOBI_SWAP,
+                                KRAKEN, KRAKEN_FUTURES, OKCOIN, OKEX, POLONIEX, PROBIT, UPBIT, WHALE_ALERT)
+from cryptofeed.defines import (FILL_OR_KILL, IMMEDIATE_OR_CANCEL, LIMIT, MAKER_OR_CANCEL, MARKET, UNSUPPORTED)
+from cryptofeed.defines import (FUNDING, FUTURES_INDEX, L2_BOOK, L3_BOOK, LIQUIDATIONS, OPEN_INTEREST, MARKET_INFO,
+                                TICKER, TRADES, TRANSACTIONS, VOLUME)
+from cryptofeed.exceptions import UnsupportedDataFeed, UnsupportedTradingOption, UnsupportedTradingPair
+from cryptofeed.pairs import gen_pairs, _exchange_info
 
 LOG = logging.getLogger('feedhandler')
-
 
 _std_trading_pairs = {}
 _exchange_to_std = {}
 
 
-def load_exchange_pair_mapping(exchange):
+def load_exchange_pair_mapping(exchange: str, key_id=None):
     if exchange in {BITMEX, DERIBIT, KRAKEN_FUTURES}:
         return
-    mapping = gen_pairs(exchange)
+    mapping = gen_pairs(exchange, key_id=key_id)
     for std, exch in mapping.items():
         _exchange_to_std[exch] = std
         if std in _std_trading_pairs:
@@ -40,7 +40,13 @@ def load_exchange_pair_mapping(exchange):
             _std_trading_pairs[std] = {exchange: exch}
 
 
-def pair_std_to_exchange(pair, exchange):
+def get_exchange_info(exchange: str, key_id=None):
+    mapping = gen_pairs(exchange, key_id=key_id)
+    info = dict(_exchange_info.get(exchange, {}))
+    return mapping, info
+
+
+def pair_std_to_exchange(pair: str, exchange: str):
     # bitmex does its own validation of trading pairs dynamically
     if exchange in {BITMEX, DERIBIT, KRAKEN_FUTURES}:
         return pair
@@ -68,10 +74,12 @@ def pair_exchange_to_std(pair):
 def timestamp_normalize(exchange, ts):
     if exchange in {BITMEX, COINBASE, HITBTC, OKCOIN, OKEX, OKEX_SWAP, OKEX_FUTURES, BYBIT, FTX, FTX_US, BITCOINCOM, BLOCKCHAIN}:
         return pd.Timestamp(ts).timestamp()
-    elif exchange in {HUOBI, HUOBI_DM, HUOBI_SWAP, BITFINEX, COINBENE, DERIBIT, BINANCE, BINANCE_US, BINANCE_JERSEY, BINANCE_FUTURES, GEMINI, BITTREX, BITMAX, KRAKEN_FUTURES, UPBIT}:
+    elif exchange in {HUOBI, HUOBI_DM, HUOBI_SWAP, BITFINEX, BYBIT, COINBENE, DERIBIT, BINANCE, BINANCE_US, BINANCE_FUTURES,
+                      BINANCE_DELIVERY, GEMINI, BITTREX, BITMAX, KRAKEN_FUTURES, UPBIT}:
         return ts / 1000.0
     elif exchange in {BITSTAMP}:
         return ts / 1000000.0
+    # WHALE_ALERT
     return ts
 
 
@@ -87,8 +95,8 @@ _feed_to_exchange_map = {
         KRAKEN_FUTURES: 'book',
         BINANCE: 'depth@100ms',
         BINANCE_US: 'depth@100ms',
-        BINANCE_JERSEY: 'depth@100ms',
         BINANCE_FUTURES: 'depth@100ms',
+        BINANCE_DELIVERY: 'depth@100ms',
         BLOCKCHAIN: 'l2',
         EXX: 'ENTRUST_ADD',
         HUOBI: 'depth.step0',
@@ -107,7 +115,9 @@ _feed_to_exchange_map = {
         BITTREX: 'SubscribeToExchangeDeltas',
         BITCOINCOM: 'subscribeOrderbook',
         BITMAX: L2_BOOK,
-        UPBIT: L2_BOOK
+        UPBIT: L2_BOOK,
+        GATEIO: 'depth.subscribe',
+        PROBIT: 'order_books'
     },
     L3_BOOK: {
         BITFINEX: 'book-R0-F0-100',
@@ -120,8 +130,8 @@ _feed_to_exchange_map = {
         KRAKEN_FUTURES: UNSUPPORTED,
         BINANCE: UNSUPPORTED,
         BINANCE_US: UNSUPPORTED,
-        BINANCE_JERSEY: UNSUPPORTED,
         BINANCE_FUTURES: UNSUPPORTED,
+        BINANCE_DELIVERY: UNSUPPORTED,
         BLOCKCHAIN: 'l3',
         EXX: UNSUPPORTED,
         HUOBI: UNSUPPORTED,
@@ -135,7 +145,8 @@ _feed_to_exchange_map = {
         GEMINI: UNSUPPORTED,
         BITCOINCOM: UNSUPPORTED,
         BITMAX: UNSUPPORTED,
-        UPBIT: UNSUPPORTED
+        UPBIT: UNSUPPORTED,
+        PROBIT: UNSUPPORTED
     },
     TRADES: {
         POLONIEX: TRADES,
@@ -148,8 +159,8 @@ _feed_to_exchange_map = {
         KRAKEN_FUTURES: 'trade',
         BINANCE: 'aggTrade',
         BINANCE_US: 'aggTrade',
-        BINANCE_JERSEY: 'aggTrade',
         BINANCE_FUTURES: 'aggTrade',
+        BINANCE_DELIVERY: 'aggTrade',
         BLOCKCHAIN: 'trades',
         EXX: 'TRADE',
         HUOBI: 'trade.detail',
@@ -168,7 +179,9 @@ _feed_to_exchange_map = {
         BITTREX: TRADES,
         BITCOINCOM: 'subscribeTrades',
         BITMAX: TRADES,
-        UPBIT: TRADES
+        UPBIT: TRADES,
+        GATEIO: 'trades.subscribe',
+        PROBIT: 'recent_trades'
     },
     TICKER: {
         POLONIEX: 1002,
@@ -181,8 +194,8 @@ _feed_to_exchange_map = {
         KRAKEN_FUTURES: 'ticker_lite',
         BINANCE: 'ticker',
         BINANCE_US: 'ticker',
-        BINANCE_JERSEY: 'ticker',
         BINANCE_FUTURES: 'ticker',
+        BINANCE_DELIVERY: 'ticker',
         BLOCKCHAIN: UNSUPPORTED,
         HUOBI: UNSUPPORTED,
         HUOBI_DM: UNSUPPORTED,
@@ -200,7 +213,9 @@ _feed_to_exchange_map = {
         BITTREX: 'SubscribeToSummaryDeltas',
         BITCOINCOM: 'subscribeTicker',
         BITMAX: UNSUPPORTED,
-        UPBIT: UNSUPPORTED
+        UPBIT: UNSUPPORTED,
+        GATEIO: UNSUPPORTED,
+        PROBIT: UNSUPPORTED
     },
     VOLUME: {
         POLONIEX: 1003
@@ -208,6 +223,8 @@ _feed_to_exchange_map = {
     FUNDING: {
         BITMEX: 'funding',
         BITFINEX: 'trades',
+        BINANCE_FUTURES: 'markPrice',
+        BINANCE_DELIVERY: 'markPrice',
         KRAKEN_FUTURES: 'ticker',
         DERIBIT: 'ticker',
         OKEX_SWAP: 'swap/funding_rate',  
@@ -237,16 +254,28 @@ _feed_to_exchange_map = {
         KRAKEN_FUTURES: 'ticker',
         DERIBIT: 'ticker',
         FTX: 'open_interest',
-        BINANCE_FUTURES: 'open_interest'
+        BINANCE_FUTURES: 'open_interest',
+        BINANCE_DELIVERY: 'open_interest',
+        BYBIT: 'instrument_info.100ms'
     },
     LIQUIDATIONS: {
         BITMEX: 'liquidation',
         BINANCE_FUTURES: 'forceOrder',
+        BINANCE_DELIVERY: 'forceOrder',
         FTX: 'trades',
-        DERIBIT: 'trades'
+        DERIBIT: 'trades',
+        OKEX: LIQUIDATIONS,
+    },
+    MARKET_INFO: {
+        COINGECKO: MARKET_INFO
+    },
+    TRANSACTIONS: {
+        WHALE_ALERT: TRANSACTIONS
+    },
+    FUTURES_INDEX: {
+        BYBIT: 'instrument_info.100ms'
     }
 }
-
 
 _exchange_options = {
     LIMIT: {
@@ -298,14 +327,21 @@ def normalize_trading_options(exchange, option):
     return ret
 
 
-def feed_to_exchange(exchange, feed):
+def feed_to_exchange(exchange, feed, silent=False):
+    def raise_error():
+        exception = UnsupportedDataFeed(f"{feed} is not currently supported on {exchange}")
+        if not silent:
+            LOG.error("Error: %r", exception)
+        raise exception
+
     if exchange == POLONIEX:
         if feed not in _feed_to_exchange_map:
             return pair_std_to_exchange(feed, POLONIEX)
+    try:
+        ret = _feed_to_exchange_map[feed][exchange]
+    except KeyError:
+        raise_error()
 
-    ret = _feed_to_exchange_map[feed][exchange]
     if ret == UNSUPPORTED:
-        exception = UnsupportedDataFeed(f"{feed} is not supported on {exchange}")
-        LOG.error("Raise %r", exception)
-        raise exception
+        raise_error()
     return ret
